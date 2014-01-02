@@ -6,7 +6,7 @@ namespace DbMigrator
 {
     class Program
     {
-        private static string _env = "dev";
+        private static string _env;
         static void Main(params string[] args)
         {
             try
@@ -28,7 +28,6 @@ namespace DbMigrator
                     _env = args[0];
                     args = args.Skip(1).ToArray();
                 }
-                Console.WriteLine("Environment is set to '"+ _env + "'");
 
                 var command = args[0].ToLower();
                 if (command == "--status" || command == "-s")
@@ -106,7 +105,7 @@ namespace DbMigrator
         private static void printHelp()
         {
             Console.WriteLine(
-@"[env]         sets current environmend to env, default is 'dev'
+@"[env]         sets current environmend to env, default env is set in default-env attribute in the config
 -m --migrate    migrates the db to the latest version
 -i --init       initialises the db for the migration process 
                 (param is --skipUpTo N,-sut N)

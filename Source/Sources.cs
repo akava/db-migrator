@@ -122,6 +122,15 @@ namespace DbMigrator
                 var config = new XmlDocument();
                 config.Load(CONFIG);
 
+                if (string.IsNullOrWhiteSpace(env))
+                {
+                    var defaultEnvNode = config.DocumentElement.Attributes["default-env"];
+                    if (defaultEnvNode == null)
+                        throw new FormatException("You must set default-env in the db.config or provide an environment explicitly");
+                    env = defaultEnvNode.InnerText;
+                }
+
+                Console.WriteLine("Environment is set to '" + env + "'");
                 var connStringNode = config.SelectSingleNode(string.Format("//db[@env='{0}']", env));
                 if (connStringNode == null)
                     throw new FormatException("Connection string node is not found for type: " + env);
