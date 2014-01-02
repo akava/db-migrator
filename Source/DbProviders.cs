@@ -34,19 +34,21 @@ namespace DbMigrator
 
     public class OracleProvider : IDbProvider
     {
-        private const string SELECT_APPLIED_MIGRATIONS_SQL = @"select NUM, REVISION, NAME, APPLIED_DATE from  APPLIED_MIGRATIONS";
+        private const string SELECT_APPLIED_MIGRATIONS_SQL = @"select NUM, HASH, NAME, APPLIED_DATE from  APPLIED_MIGRATIONS";
 
         private const string CREATE_APPLIED_MIGRATIONS_TABLE_SQL = @"create table APPLIED_MIGRATIONS (
                                                                       NUM int,
-                                                                      REVISION varchar(50),
+                                                                      HASH varchar(32),
                                                                       NAME varchar(100),
                                                                       APPLIED_DATE timestamp(6)
                                                                     )";
+        private const string UNIQUE_MIGRATIONS_CONSTRAINT_SQL = @"alter table applied_migrations
+                                                                    add constraint mig_unique_num_name unique (num, name)";
 
-        private const string INSERT_MIGRATION_SQL = @"insert into applied_migrations(NUM, REVISION, NAME, APPLIED_DATE) 
-                                                        values (:num, :revision, :name, :applied_date)";
+        private const string INSERT_MIGRATION_SQL = @"insert into applied_migrations(NUM, HASH, NAME, APPLIED_DATE) 
+                                                        values (:num, :hash, :name, :applied_date)";
         private const string UPDATE_MIGRATION_SQL = @"update applied_migrations
-                                                        set REVISION = :revision, APPLIED_DATE = :applied_date 
+                                                        set HASH = :hash, APPLIED_DATE = :applied_date 
                                                         where NUM = :num and NAME = :name";
         private const int TABLE_DOES_NOT_EXIST = 942;
 
@@ -76,8 +78,8 @@ namespace DbMigrator
                     using (var reader = command.ExecuteReader())
                         while (reader.Read())
                             appliedMigrations.Add(
-                                Migration.MakeAppliedMigration(reader.GetInt32(0), reader.GetString(1), 
-                                reader.GetString(2), reader.GetDateTime(3)));
+                                Migration.MakeAppliedMigration(reader.GetInt32(0), 
+                                reader.GetString(2), reader.GetString(1), reader.GetDateTime(3)));
                 }
 
                 return appliedMigrations;
@@ -94,6 +96,7 @@ namespace DbMigrator
         public void CreateAppliedMigrationsTable()
         {
             ExecuteNonQuery(CREATE_APPLIED_MIGRATIONS_TABLE_SQL);
+            ExecuteNonQuery(UNIQUE_MIGRATIONS_CONSTRAINT_SQL);
         }
 
         public void RegisterMigration(Migration migration, bool isNew)
@@ -103,7 +106,7 @@ namespace DbMigrator
             {
                 command.CommandText = isNew ? INSERT_MIGRATION_SQL : UPDATE_MIGRATION_SQL;
                 command.Parameters.AddWithValue(":num", migration.Num);
-                command.Parameters.AddWithValue(":revision", migration.Revision);
+                command.Parameters.AddWithValue(":hash", migration.Hash);
                 command.Parameters.AddWithValue(":name", migration.Name);
                 command.Parameters.AddWithValue(":applied_date", DateTime.Now);
 
@@ -127,19 +130,22 @@ namespace DbMigrator
 
     public class MssqlProvider : IDbProvider
     {
-        private const string SELECT_APPLIED_MIGRATIONS_SQL = @"select num, revision, name, applied_date from  applied_migrations";
+        private const string SELECT_APPLIED_MIGRATIONS_SQL = @"select num, hash, name, applied_date from  applied_migrations";
 
         private const string CREATE_APPLIED_MIGRATIONS_TABLE_SQL = @"create table applied_migrations (
                                                                       num int,
-                                                                      revision varchar(50),
+                                                                      hash varchar(32),
                                                                       name varchar(100),
                                                                       applied_date datetime2
                                                                     )";
 
-        private const string INSERT_MIGRATION_SQL = @"insert into applied_migrations(num, revision, name, applied_date) 
-                                                        values (@num, @revision, @name, @applied_date)";
+        private const string UNIQUE_MIGRATIONS_CONSTRAINT_SQL = @"alter table applied_migrations
+                                                                    add constraint mig_unique_num_name unique (num, name)";
+
+        private const string INSERT_MIGRATION_SQL = @"insert into applied_migrations(num, hash, name, applied_date) 
+                                                        values (@num, @hash, @name, @applied_date)";
         private const string UPDATE_MIGRATION_SQL = @"update applied_migrations
-                                                        set REVISION = @revision, APPLIED_DATE = @applied_date 
+                                                        set HASH = @hash, APPLIED_DATE = @applied_date 
                                                         where NUM = @num and NAME = @name";
         private const int TABLE_DOES_NOT_EXIST = -2146232060;
 
@@ -169,8 +175,8 @@ namespace DbMigrator
                     using (var reader = command.ExecuteReader())
                         while (reader.Read())
                             appliedMigrations.Add(
-                                Migration.MakeAppliedMigration(reader.GetInt32(0), reader.GetString(1), 
-                                                               reader.GetString(2), reader.GetDateTime(3)));
+                                Migration.MakeAppliedMigration(reader.GetInt32(0), 
+                                                               reader.GetString(2), reader.GetString(1), reader.GetDateTime(3)));
                 }
 
                 return appliedMigrations;
@@ -188,6 +194,7 @@ namespace DbMigrator
         public void CreateAppliedMigrationsTable()
         {
             ExecuteNonQuery(CREATE_APPLIED_MIGRATIONS_TABLE_SQL);
+            ExecuteNonQuery(UNIQUE_MIGRATIONS_CONSTRAINT_SQL);
         }
 
         public void RegisterMigration(Migration migration, bool isNew)
@@ -197,7 +204,7 @@ namespace DbMigrator
             {
                 command.CommandText = isNew ? INSERT_MIGRATION_SQL : UPDATE_MIGRATION_SQL;
                 command.Parameters.AddWithValue("@num", migration.Num);
-                command.Parameters.AddWithValue("@revision", migration.Revision);
+                command.Parameters.AddWithValue("@hash", migration.Hash);
                 command.Parameters.AddWithValue("@name", migration.Name);
                 command.Parameters.AddWithValue("@applied_date", DateTime.Now);
 

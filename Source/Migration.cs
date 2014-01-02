@@ -4,36 +4,35 @@ namespace DbMigrator
 {
     public class Migration
     {
+        private const int OBJECT_MIGRATION_NUM = 9999;
+
         public static Migration MakeChangeset(int num, string name, string content)
         {
-            return new Migration { Num = num, Name = name, Revision = "none", Content = content };
+            return new Migration { Num = num, Name = name, Hash = "00000000000000000000000000000000", Content = content };
         }
         
-        public static Migration MakeObjectMigration(string revision, string name, string content)
+        public static Migration MakeObjectMigration(string name, string content)
         {
-            return new Migration {Num = -1,Revision = revision, Name = name, Content = content};
+            var hash = Utils.ComputeMd5Hash(content);
+            return new Migration {Num = OBJECT_MIGRATION_NUM,Hash = hash, Name = name, Content = content};
         }
 
-        public static Migration MakeAppliedMigration(int num, string revision, string name, DateTime applyDate)
+        public static Migration MakeAppliedMigration(int num, string name, string hash, DateTime applyDate)
         {
-            return new Migration { Num = num, Revision = revision, Name = name, ApplyDate = applyDate };
+            return new Migration { Num = num, Hash = hash, Name = name, ApplyDate = applyDate };
         }
 
         public int Num { get; private set; }
-        public string Revision { get; private set; }
         public string Name { get; private set; }
         public string Content { get; private set; }
+        public string Hash { get; private set; }
         public DateTime ApplyDate { get; private set; }
-
 
         public override string ToString()
         {
-            if (Num != 0)
+            if (Num != OBJECT_MIGRATION_NUM)
                 return string.Format("#{0} {1}", Num, Name);
-            if (string.IsNullOrWhiteSpace(Revision))
-                return string.Format("r{0} {1}", Revision, Name);
-
-            return string.Format("#{0} r{1} {2}", Num, Revision, Name);
+            return string.Format("{0} ({1})", Name, Hash);
         }
 
         public override bool Equals(object obj)
@@ -42,12 +41,12 @@ namespace DbMigrator
             if (m == null)
                 return false;
 
-            return (m.Num == Num) &&(m.Revision == Revision) && (m.Name == Name);
+            return (m.Num == Num) &&(m.Hash == Hash) && (m.Name == Name);
         }
 
         public override int GetHashCode()
         {
-            return Num.GetHashCode() ^Revision.GetHashCode() ^ Name.GetHashCode();
+            return Num.GetHashCode() ^ Hash.GetHashCode() ^ Name.GetHashCode();
         }
     }
 }

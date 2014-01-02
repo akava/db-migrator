@@ -60,18 +60,11 @@ namespace DbMigrator
             if (!Directory.Exists(OBJECTS_DIR))
                 return null;
 
-            var vcsClient = VcsClients.CreateForDir(OBJECTS_DIR);
-            if (vcsClient == null)
-                throw new ApplicationException(
-                    "Objects dir is exist but not stored under source countrol (svn is supported only)");
-
             var migrations = new List<Migration>();
             foreach (var scriptPath in Directory.GetFiles(OBJECTS_DIR, "*.sql", SearchOption.AllDirectories))
             {
                 var content = File.ReadAllText(scriptPath);
-                var revision = vcsClient.GetRevisionFor(scriptPath.Replace(OBJECTS_DIR + "\\", ""));
-
-                migrations.Add(Migration.MakeObjectMigration(revision, Path.GetFileName(scriptPath), content));
+                migrations.Add(Migration.MakeObjectMigration(Path.GetFileName(scriptPath), content));
             }
 
             return migrations;
