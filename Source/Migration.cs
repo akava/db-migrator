@@ -1,35 +1,26 @@
 using System;
-using System.Collections.Generic;
-using System.Net;
 
 namespace DbMigrator
 {
     public class Migration
     {
-        public Migration(string fileName, string fileContent)
+        public static Migration MakeChangeset(int num, string name, string content)
         {
-            try
-            {
-                Num = int.Parse(fileName.Substring(0, 4));
-                Name = fileName.Substring(4 + 1).Split('.')[0];
-                Content = fileContent;
-            }
-            catch (Exception ex)
-            {
-                throw new ArgumentException(string.Format(
-                    "Filename has invalid format. Given: {0} Expected: '0000_text_text_text.sql'. Inner message: {1}",
-                    fileName, ex.Message), ex);
-            }
+            return new Migration { Num = num, Name = name, Revision = "none", Content = content };
+        }
+        
+        public static Migration MakeObjectMigration(string revision, string name, string content)
+        {
+            return new Migration {Num = -1,Revision = revision, Name = name, Content = content};
         }
 
-        public Migration(int num, string name, DateTime applyDate)
+        public static Migration MakeAppliedMigration(int num, string revision, string name, DateTime applyDate)
         {
-            Num = num;
-            Name = name;
-            ApplyDate = applyDate;
+            return new Migration { Num = num, Revision = revision, Name = name, ApplyDate = applyDate };
         }
 
         public int Num { get; private set; }
+        public string Revision { get; private set; }
         public string Name { get; private set; }
         public string Content { get; private set; }
         public DateTime ApplyDate { get; private set; }
@@ -37,7 +28,12 @@ namespace DbMigrator
 
         public override string ToString()
         {
-            return string.Format("#{0} {1}", Num, Name);
+            if (Num != 0)
+                return string.Format("#{0} {1}", Num, Name);
+            if (string.IsNullOrWhiteSpace(Revision))
+                return string.Format("r{0} {1}", Revision, Name);
+
+            return string.Format("#{0} r{1} {2}", Num, Revision, Name);
         }
 
         public override bool Equals(object obj)
@@ -46,12 +42,12 @@ namespace DbMigrator
             if (m == null)
                 return false;
 
-            return (m.Num == Num) && (m.Name == Name);
+            return (m.Num == Num) &&(m.Revision == Revision) && (m.Name == Name);
         }
 
         public override int GetHashCode()
         {
-            return Num.GetHashCode() ^ Name.GetHashCode();
+            return Num.GetHashCode() ^Revision.GetHashCode() ^ Name.GetHashCode();
         }
     }
 }

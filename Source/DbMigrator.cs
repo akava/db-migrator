@@ -1,71 +1,41 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data.OracleClient;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Ionic.Zip;
 
-#pragma warning disable 612,618
 namespace DbMigrator
 {
     public class DbMigrator
     {
-        private const string SELECT_APPLIED_MIGRATIONS_SQL = @"select NUM, NAME, APPLIED_DATE from  APPLIED_MIGRATIONS";
-
-        private const string CREATE_APPLIED_MIGRATIONS_TABLE_SQL = @"create table APPLIED_MIGRATIONS (
-                                                                      NUM int,
-                                                                      NAME varchar(100),
-                                                                      APPLIED_DATE timestamp(6)
-                                                                    )";
-
-        private const string INSERT_MIGRATION_SQL = @"insert into applied_migrations(NUM, NAME, APPLIED_DATE) 
-                                                        values (:num, :name, :applied_date)";
-        private const int TABLE_DOES_NOT_EXIST = 942;
-
-
-        private readonly string _connString;
+        private readonly IDbProvider _provider;
         private readonly List<Migration> _migrations;
         private readonly List<Migration> _appliedMigrations;
-        private readonly bool _dbInitialized = true;
 
         public string ConnString
         {
-            get { return _connString; }
+            get { return _provider.ConnString; }
         }
 
-        public DbMigrator(string connString, IEnumerable<Migration> migrations)
+        public DbMigrator(IDbProvider provider, IEnumerable<Migration> migrations)
         {
-            _connString = connString;
+            _provider = provider;
+
             _migrations = new List<Migration>(migrations);
-
-            try
-            {
-                _appliedMigrations = retrieveAppliedMigrations();
-            }
-            catch (OracleException ex)
-            {
-                if (ex.Code == TABLE_DOES_NOT_EXIST)
-                {
-                    _dbInitialized = false;
-                    _appliedMigrations = new List<Migration>();
-                    return;
-                }
-
-                throw;
-            }
+            _appliedMigrations = _provider.RetrieveAppliedMigrations();
         }
 
         public int Init(int skipUpTo)
         {
-            if (_dbInitialized)
-                throw new BadStateException("Database already initialized for migrations");
+            if (_provider.DbInitialized)
+                throw new ApplicationException("Database already initialized for migrations");
 
-            createAppliedMigrationsTable();
+            _provider.CreateAppliedMigrationsTable();
 
             var migrationsToSkip = _migrations.Where(m => m.Num <= skipUpTo).ToList();
             foreach (var migration in migrationsToSkip)
             {
-                registerMigration(migration);
+                _provider.RegisterMigration(migration);
+                _appliedMigrations.Add(migration);
             }
 
             PrintStatus();
@@ -75,14 +45,14 @@ namespace DbMigrator
 
         public void Migrate()
         {
-            if (_dbInitialized == false)
-                throw new BadStateException("Migration table does not exist. Run \"init\" command first");
+            if (_provider.DbInitialized == false)
+                throw new ApplicationException("Migration table does not exist. Run \"init\" command first");
 
             var toBeApplied = _migrations.Where(m => !_appliedMigrations.Contains(m)).ToList();
-            if (!toBeApplied.Any())
+            if (toBeApplied.Count == 0)
             {
                 Console.WriteLine("Nothing to apply");
-                return ;
+                return;
             }
 
             // TODO: warn on unknown and missing migrations
@@ -116,7 +86,7 @@ namespace DbMigrator
                             throw new ApplicationException("Function's and trigger's and procedure's scripts must to be closed with ';'");
                     }
 
-                    executeNonQuery(applyingScript);
+                    _provider.ExecuteNonQuery(applyingScript);
                 }
             }
             catch (Exception ex)
@@ -128,8 +98,9 @@ namespace DbMigrator
                 throw new ApplicationException("Execution terminated");
             }
 
+            _provider.RegisterMigration(migration);
+            _appliedMigrations.Add(migration);
             Console.WriteLine("Script {0} applied successful", migration);
-            registerMigration(migration);
         }
 
 
@@ -152,58 +123,6 @@ namespace DbMigrator
             var status = string.Format("Status: all ({0}), applied ({1})", _migrations.Count, _appliedMigrations.Count);
 
             Console.WriteLine(status);
-        }
-
-        private List<Migration> retrieveAppliedMigrations()
-        {
-            var appliedMigrations = new List<Migration>();
-
-            using (var conn = new OracleConnection(_connString))
-            using (var command = conn.CreateCommand())
-            {
-                command.CommandText = SELECT_APPLIED_MIGRATIONS_SQL;
-                conn.Open();
-
-                using (var reader = command.ExecuteReader())
-                    while (reader.Read())
-                        appliedMigrations.Add(
-                            new Migration(reader.GetInt32(0), reader.GetString(1), reader.GetDateTime(2)));
-            }
-            
-            return appliedMigrations;
-        }
-
-        private void createAppliedMigrationsTable()
-        {
-            executeNonQuery(CREATE_APPLIED_MIGRATIONS_TABLE_SQL);
-        }
-
-        private void registerMigration(Migration migration)
-        {
-            using (var conn = new OracleConnection(_connString))
-            using (var command = conn.CreateCommand())
-            {
-                command.CommandText = INSERT_MIGRATION_SQL;
-                command.Parameters.AddWithValue(":num", migration.Num);
-                command.Parameters.AddWithValue(":name", migration.Name);
-                command.Parameters.AddWithValue(":applied_date", DateTime.Now);
-
-                conn.Open();
-                command.ExecuteNonQuery();
-            }
-            _appliedMigrations.Add(migration);
-        }
-
-        private void executeNonQuery(string sql)
-        {
-            using (var conn = new OracleConnection(_connString))
-            using (var command = conn.CreateCommand())
-            {
-                command.CommandText = sql;
-                conn.Open();
-
-                command.ExecuteNonQuery();
-            }
         }
     }
 }

@@ -6,7 +6,7 @@ namespace DbMigrator
 {
     class Program
     {
-        private static string DbType = "local";
+        private static string _env = "dev";
         static void Main(params string[] args)
         {
             try
@@ -25,10 +25,10 @@ namespace DbMigrator
 
                 if (!args[0].StartsWith("-"))
                 {
-                    DbType = args[0];
+                    _env = args[0];
                     args = args.Skip(1).ToArray();
                 }
-                Console.WriteLine("DB type is set to '"+ DbType + "'");
+                Console.WriteLine("Environment is set to '"+ _env + "'");
 
                 var command = args[0].ToLower();
                 if (command == "--status" || command == "-s")
@@ -91,28 +91,31 @@ namespace DbMigrator
 
         private static DbMigrator createMigrator()
         {
-            var connString = Sources.extractConnString(DbType);
             var migrations = Sources.readMigrationsFromArchive() 
                              ?? Sources.readMigrationsFromFolders();
-
             if (migrations == null)
                 throw new ApplicationException("Migrations are not found");
 
-            return new DbMigrator(connString, migrations);
+            var dbType = Sources.extractProviderType();
+            var connString = Sources.extractConnString(_env);
+            var provider = DbProviders.Create(dbType, connString);
+
+            return new DbMigrator(provider, migrations);
         }
 
         private static void printHelp()
         {
             Console.WriteLine(
-@"-m --migrate    migrates the db to the latest version
+@"[env]         sets current environmend to env, default is 'dev'
+-m --migrate    migrates the db to the latest version
 -i --init       initialises the db for the migration process 
                 (param is --skipUpTo N,-sut N)
 -s --status     prints the db migration status
 -h --help       prints this help
 
-Use 'dbMigrator migrate' to upgrade your database to the latest version.
-Use 'dbMigrator --init' to initialize the DB for migrations.
-Use 'dbMigrator --init --skipupto N' to initialize the DB for migrations 
+Use 'dbMigrator [env] --migrate' to upgrade your database to the latest version.
+Use 'dbMigrator [env] --init' to initialize the DB for migrations.
+Use 'dbMigrator [env] --init --skipupto N' to initialize the DB for migrations 
 and mark scripts which number less or equal than N as already applied.
 
 Connection string is read from {0} file. 

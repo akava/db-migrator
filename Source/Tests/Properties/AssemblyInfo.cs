@@ -5,12 +5,12 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("DbMigrator")]
+[assembly: AssemblyTitle("Tests")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("Goodyear")]
-[assembly: AssemblyProduct("DbMigrator")]
-[assembly: AssemblyCopyright("Copyright © Goodyear 2012")]
+[assembly: AssemblyCompany("")]
+[assembly: AssemblyProduct("Tests")]
+[assembly: AssemblyCopyright("Copyright ©  2013")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("73c238e8-9b66-4fc1-b0a7-b53d6464f23f")]
+[assembly: Guid("4cb900a5-0125-4720-b4ad-b99679665b15")]
 
 // Version information for an assembly consists of the following four values:
 //
