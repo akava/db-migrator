@@ -34,7 +34,7 @@ namespace DbMigrator
             var migrationsToSkip = _migrations.Where(m => m.Num <= skipUpTo).ToList();
             foreach (var migration in migrationsToSkip)
             {
-                _provider.RegisterMigration(migration);
+                _provider.RegisterMigration(migration, true);
                 _appliedMigrations.Add(migration);
             }
 
@@ -49,27 +49,21 @@ namespace DbMigrator
                 throw new ApplicationException("Migration table does not exist. Run \"init\" command first");
 
             var toBeApplied = _migrations.Where(m => !_appliedMigrations.Contains(m)).ToList();
-            if (toBeApplied.Count == 0)
-            {
-                Console.WriteLine("Nothing to apply");
-                return;
-            }
-
-            // TODO: warn on unknown and missing migrations
-
-
             foreach (var migration in toBeApplied.OrderBy(m => m.Num))
             {
-                applyMigration(migration);
+                var isNew = !_appliedMigrations.Any(m => m.Num == migration.Num && m.Name == migration.Name);
+                applyMigration(migration, isNew);
             }
+
+            if (toBeApplied.Count == 0)
+                Console.WriteLine("Nothing to apply");
 
             PrintStatus();
         }
 
-        private void applyMigration(Migration migration)
+        private void applyMigration(Migration migration, bool isNew)
         {
             var scripts = migration.Content.Split(new[] { "\n;\n", "\n;\r\n" }, StringSplitOptions.RemoveEmptyEntries);
-
             var applyingScript = "";
             try
             {
@@ -98,7 +92,7 @@ namespace DbMigrator
                 throw new ApplicationException("Execution terminated");
             }
 
-            _provider.RegisterMigration(migration);
+            _provider.RegisterMigration(migration, isNew);
             _appliedMigrations.Add(migration);
             Console.WriteLine("Script {0} applied successful", migration);
         }

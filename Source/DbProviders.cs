@@ -28,7 +28,7 @@ namespace DbMigrator
         string ConnString { get; }
         List<Migration> RetrieveAppliedMigrations();
         void CreateAppliedMigrationsTable();
-        void RegisterMigration(Migration migration);
+        void RegisterMigration(Migration migration, bool isNew);
         void ExecuteNonQuery(string sql);
     }
 
@@ -45,6 +45,9 @@ namespace DbMigrator
 
         private const string INSERT_MIGRATION_SQL = @"insert into applied_migrations(NUM, REVISION, NAME, APPLIED_DATE) 
                                                         values (:num, :revision, :name, :applied_date)";
+        private const string UPDATE_MIGRATION_SQL = @"update applied_migrations
+                                                        set REVISION = :revision, APPLIED_DATE = :applied_date 
+                                                        where NUM = :num and NAME = :name";
         private const int TABLE_DOES_NOT_EXIST = 942;
 
 
@@ -93,12 +96,12 @@ namespace DbMigrator
             ExecuteNonQuery(CREATE_APPLIED_MIGRATIONS_TABLE_SQL);
         }
 
-        public void RegisterMigration(Migration migration)
+        public void RegisterMigration(Migration migration, bool isNew)
         {
             using (var conn = new OracleConnection(_connString))
             using (var command = conn.CreateCommand())
             {
-                command.CommandText = INSERT_MIGRATION_SQL;
+                command.CommandText = isNew ? INSERT_MIGRATION_SQL : UPDATE_MIGRATION_SQL;
                 command.Parameters.AddWithValue(":num", migration.Num);
                 command.Parameters.AddWithValue(":revision", migration.Revision);
                 command.Parameters.AddWithValue(":name", migration.Name);
@@ -135,6 +138,9 @@ namespace DbMigrator
 
         private const string INSERT_MIGRATION_SQL = @"insert into applied_migrations(num, revision, name, applied_date) 
                                                         values (@num, @revision, @name, @applied_date)";
+        private const string UPDATE_MIGRATION_SQL = @"update applied_migrations
+                                                        set REVISION = @revision, APPLIED_DATE = @applied_date 
+                                                        where NUM = @num and NAME = @name";
         private const int TABLE_DOES_NOT_EXIST = -2146232060;
 
 
@@ -184,12 +190,12 @@ namespace DbMigrator
             ExecuteNonQuery(CREATE_APPLIED_MIGRATIONS_TABLE_SQL);
         }
 
-        public void RegisterMigration(Migration migration)
+        public void RegisterMigration(Migration migration, bool isNew)
         {
             using (var conn = new SqlConnection(_connString))
             using (var command = conn.CreateCommand())
             {
-                command.CommandText = INSERT_MIGRATION_SQL;
+                command.CommandText = isNew ? INSERT_MIGRATION_SQL : UPDATE_MIGRATION_SQL;
                 command.Parameters.AddWithValue("@num", migration.Num);
                 command.Parameters.AddWithValue("@revision", migration.Revision);
                 command.Parameters.AddWithValue("@name", migration.Name);
