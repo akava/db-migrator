@@ -40,16 +40,17 @@ namespace DbMigrator
                 var fileName = Path.GetFileNameWithoutExtension(scriptPath);
                 var content = File.ReadAllText(scriptPath);
 
-                try
+                var num = "";
+                var name = fileName;
+
+                var underscorePosition = fileName.IndexOf('_');
+                if (underscorePosition != -1)
                 {
-                    changesets.Add(Migration.MakeChangeset(int.Parse(fileName.Substring(0, 4)), fileName.Substring(4 + 1), content));
+                    num = fileName.Substring(0, underscorePosition);
+                    name = fileName.Substring(underscorePosition + 1);
                 }
-                catch (Exception ex)
-                {
-                    throw new ArgumentException(string.Format(
-                        "Filename has invalid format. Given: {0} Expected: '0000_text_text_text.sql'. Inner message: {1}",
-                        fileName, ex.Message), ex);
-                }
+
+                changesets.Add(Migration.MakeChangeset(num, name, content));
             }
 
             return changesets;
@@ -79,19 +80,18 @@ namespace DbMigrator
             using (var zip = ZipFile.Read(SCRIPTS_ARCHIVE))
                 foreach (var script in zip)
                 {
-                    try
+                    var fileName = script.FileName;
+
+                    var num = "";
+                    var name = fileName;
+
+                    var underscorePosition = fileName.IndexOf('_');
+                    if (underscorePosition != -1)
                     {
-                        var num = int.Parse(script.FileName.Substring(0, 4));
-                        var name = script.FileName.Substring(4 + 1).Split('.')[0];
-                        var content = readContent(script);
-                        migrations.Add(Migration.MakeChangeset(num, name, content));
+                        num = fileName.Substring(0, underscorePosition);
+                        name = fileName.Substring(underscorePosition + 1);
                     }
-                    catch (Exception ex)
-                    {
-                        throw new ArgumentException(string.Format(
-                            "Filename has invalid format. Given: {0} Expected: '0000_text_text_text.sql'. Inner message: {1}",
-                            script.FileName, ex.Message), ex);
-                    }
+                    migrations.Add(Migration.MakeChangeset(num, name, readContent(script)));
                 }
 
             return migrations;

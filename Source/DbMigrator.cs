@@ -24,23 +24,25 @@ namespace DbMigrator
             _appliedMigrations = _provider.RetrieveAppliedMigrations();
         }
 
-        public int Init(int skipUpTo)
+        public int Init(bool skipExising)
         {
             if (_provider.DbInitialized)
                 throw new ApplicationException("Database already initialized for migrations");
 
             _provider.CreateAppliedMigrationsTable();
 
-            var migrationsToSkip = _migrations.Where(m => m.Num <= skipUpTo).ToList();
-            foreach (var migration in migrationsToSkip)
+            if (skipExising)
             {
-                _provider.RegisterMigration(migration, true);
-                _appliedMigrations.Add(migration);
+                foreach (var migration in _migrations)
+                {
+                    _provider.RegisterMigration(migration, true);
+                    _appliedMigrations.Add(migration);
+                }
             }
 
             PrintStatus();
 
-            return migrationsToSkip.Count;
+            return _appliedMigrations.Count;
         }
 
         public void Migrate()
@@ -49,7 +51,7 @@ namespace DbMigrator
                 throw new ApplicationException("Migration table does not exist. Run \"init\" command first");
 
             var toBeApplied = _migrations.Where(m => !_appliedMigrations.Contains(m)).ToList();
-            foreach (var migration in toBeApplied.OrderBy(m => m.Num))
+            foreach (var migration in toBeApplied.OrderBy(m => m.Num).ThenBy(m=> m.Name))
             {
                 var isNew = !_appliedMigrations.Any(m => m.Num == migration.Num && m.Name == migration.Name);
                 applyMigration(migration, isNew);

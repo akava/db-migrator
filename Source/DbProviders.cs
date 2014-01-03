@@ -34,10 +34,11 @@ namespace DbMigrator
 
     public class OracleProvider : IDbProvider
     {
+#pragma warning disable 618
         private const string SELECT_APPLIED_MIGRATIONS_SQL = @"select NUM, HASH, NAME, APPLIED_DATE from  APPLIED_MIGRATIONS";
 
         private const string CREATE_APPLIED_MIGRATIONS_TABLE_SQL = @"create table APPLIED_MIGRATIONS (
-                                                                      NUM int,
+                                                                      NUM varchar(20),
                                                                       HASH varchar(32),
                                                                       NAME varchar(100),
                                                                       APPLIED_DATE timestamp(6)
@@ -78,7 +79,7 @@ namespace DbMigrator
                     using (var reader = command.ExecuteReader())
                         while (reader.Read())
                             appliedMigrations.Add(
-                                Migration.MakeAppliedMigration(reader.GetInt32(0), 
+                                Migration.MakeAppliedMigration(reader.GetString(0), 
                                 reader.GetString(2), reader.GetString(1), reader.GetDateTime(3)));
                 }
 
@@ -126,6 +127,7 @@ namespace DbMigrator
                 command.ExecuteNonQuery();
             }
         }
+#pragma warning restore 618
     }
 
     public class MssqlProvider : IDbProvider
@@ -133,7 +135,7 @@ namespace DbMigrator
         private const string SELECT_APPLIED_MIGRATIONS_SQL = @"select num, hash, name, applied_date from  applied_migrations";
 
         private const string CREATE_APPLIED_MIGRATIONS_TABLE_SQL = @"create table applied_migrations (
-                                                                      num int,
+                                                                      num varchar(20),
                                                                       hash varchar(32),
                                                                       name varchar(100),
                                                                       applied_date datetime2
@@ -175,7 +177,7 @@ namespace DbMigrator
                     using (var reader = command.ExecuteReader())
                         while (reader.Read())
                             appliedMigrations.Add(
-                                Migration.MakeAppliedMigration(reader.GetInt32(0), 
+                                Migration.MakeAppliedMigration(reader.GetString(0), 
                                                                reader.GetString(2), reader.GetString(1), reader.GetDateTime(3)));
                 }
 

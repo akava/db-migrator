@@ -44,12 +44,11 @@ namespace DbMigrator
 
                 if (command == "--init" || command == "-i")
                 {
-                    var skipUpTo = 0;
-                    if (args.Length == 3 && (args[1].ToLower() == "--skipupto" || args[1].ToLower() == "-sut"))
-                        if (!int.TryParse(args[2], out skipUpTo))
-                            throw new ArgumentException("SkipUpTo parameter must be a number");
+                    var skipExisting = false;
+                    if (args.Length == 2 && (args[1].ToLower() == "--skipexisting" || args[1].ToLower() == "-se"))
+                        skipExisting = true;
 
-                    init(skipUpTo);
+                    init(skipExisting);
                     return;
                 }
 
@@ -67,10 +66,10 @@ namespace DbMigrator
 //            }
         }
 
-        private static void init(int skipUpTo)
+        private static void init(bool skipExisting)
         {
             var migrator = createMigrator();
-            var runMigrations = migrator.Init(skipUpTo);
+            var runMigrations = migrator.Init(skipExisting);
 
             var dbName = Sources.extractDbName(migrator.ConnString);
             Console.WriteLine("DB '{0}' successfully migrated for migrations. {1} scripts have been registered", dbName ,runMigrations);
@@ -105,17 +104,17 @@ namespace DbMigrator
         private static void printHelp()
         {
             Console.WriteLine(
-@"[env]         sets current environmend to env, default env is set in default-env attribute in the config
+@"Use 'dbMigrator [env] --migrate' to upgrade your database to the latest version.
+Use 'dbMigrator [env] --init' to initialize the DB for migrations.
+Use 'dbMigrator [env] --init --skipexisting' to initialize the DB for migrations 
+and mark all exising scripts as already applied.
+
+[env]         sets current environmend to env, default env is set in default-env attribute in the config
 -m --migrate    migrates the db to the latest version
 -i --init       initialises the db for the migration process 
-                (param is --skipUpTo N,-sut N)
+                (param is --skipexisting,-se)
 -s --status     prints the db migration status
 -h --help       prints this help
-
-Use 'dbMigrator [env] --migrate' to upgrade your database to the latest version.
-Use 'dbMigrator [env] --init' to initialize the DB for migrations.
-Use 'dbMigrator [env] --init --skipupto N' to initialize the DB for migrations 
-and mark scripts which number less or equal than N as already applied.
 
 Connection string is read from {0} file. 
 Update scripts are read from {1} zipped archive or {2} folder.",
