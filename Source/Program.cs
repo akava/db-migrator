@@ -58,7 +58,8 @@ namespace DbMigrator
             {
                 Console.WriteLine(ex.Message);
                 Console.WriteLine();
-                printHelp();
+                Console.WriteLine();
+                Console.WriteLine("To get help use -h modifier");
             }
 //            finally
 //            {
